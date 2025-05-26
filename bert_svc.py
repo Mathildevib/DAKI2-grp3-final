@@ -1,4 +1,4 @@
-# llm_svm_productid.py
+# bert_svc.py
 """
 Træner en SVM på BERT-embeddings (DanskBERT) for at forudsige Product ID (Product) (Product)
 Bruger Maybe_final/Dataset/train_dataset.csv som input.
@@ -150,9 +150,9 @@ def main():
     print(f"{'quantity_acc':>15}: {'N/A':>5}")
     # --- Gem model og encoder ---
     import pickle
-    with open('llm_svm_productid_model.pkl', 'wb') as f:
+    with open('bert_svc_model.pkl', 'wb') as f:
         pickle.dump({'model': svm, 'label_encoder': label_encoder}, f)
-    print("\nSVM model gemt som 'llm_svm_productid_model.pkl'")
+    print("\nSVM model gemt som 'bert_svc_model.pkl'")
 
 if __name__ == "__main__":
     main()
