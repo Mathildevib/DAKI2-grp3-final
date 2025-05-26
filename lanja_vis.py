@@ -61,12 +61,10 @@ plt.tight_layout()
 plt.savefig('Visual/recall_vs_frequency_scatter.png', dpi=300, bbox_inches='tight')
 plt.close()
 
-# Add trend line
+# Changed from regplot to scatterplot (no trend line)
 plt.figure(figsize=(10, 6))
-sns.regplot(data=product_freq, x='count', y='recall', 
-           scatter_kws={'alpha': 0.5, 'color': 'blue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Recall vs. Product Frequency with Trend Line')
+sns.scatterplot(data=product_freq, x='count', y='recall', color='blue', alpha=0.5)
+plt.title('Recall vs. Product Frequency')
 plt.xlabel('Number of product occurrences (ground truth)')
 plt.ylabel('Recall')
 plt.grid(True, alpha=0.3)
@@ -85,12 +83,10 @@ plt.tight_layout()
 plt.savefig('Visual/precision_vs_frequency_scatter.png', dpi=300, bbox_inches='tight')
 plt.close()
 
-# Add trend line for precision
+# Changed from regplot to scatterplot (no trend line)
 plt.figure(figsize=(10, 6))
-sns.regplot(data=product_freq, x='count', y='precision', 
-           scatter_kws={'alpha': 0.5, 'color': 'steelblue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Precision vs. Product Frequency with Trend Line')
+sns.scatterplot(data=product_freq, x='count', y='precision', color='steelblue', alpha=0.5)
+plt.title('Precision vs. Product Frequency')
 plt.xlabel('Number of product occurrences (ground truth)')
 plt.ylabel('Precision')
 plt.grid(True, alpha=0.3)
@@ -117,12 +113,10 @@ plt.tight_layout()
 plt.savefig('Visual/recall_vs_instruction_scatter.png', dpi=300, bbox_inches='tight')
 plt.close()
 
-# Add trend line
+# Changed from regplot to scatterplot (no trend line)
 plt.figure(figsize=(10, 6))
-sns.regplot(data=length_perf, x='instruction_length', y='recall', 
-           scatter_kws={'alpha': 0.5, 'color': 'blue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Instruction Length vs Recall with Trend Line')
+sns.scatterplot(data=length_perf, x='instruction_length', y='recall', color='blue', alpha=0.5)
+plt.title('Instruction Length vs Recall per Product')
 plt.xlabel('Average instruction length')
 plt.ylabel('Recall')
 plt.grid(True, alpha=0.3)
@@ -141,12 +135,10 @@ plt.tight_layout()
 plt.savefig('Visual/precision_vs_instruction_scatter.png', dpi=300, bbox_inches='tight')
 plt.close()
 
-# Add trend line
+# Changed from regplot to scatterplot (no trend line)
 plt.figure(figsize=(10, 6))
-sns.regplot(data=length_perf, x='instruction_length', y='precision', 
-           scatter_kws={'alpha': 0.5, 'color': 'cornflowerblue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Instruction Length vs Precision with Trend Line')
+sns.scatterplot(data=length_perf, x='instruction_length', y='precision', color='cornflowerblue', alpha=0.5)
+plt.title('Instruction Length vs Precision per Product')
 plt.xlabel('Average instruction length')
 plt.ylabel('Precision')
 plt.grid(True, alpha=0.3)
@@ -197,11 +189,10 @@ plt.close()
 # F1-score calculation and visualization
 product_freq['f1'] = 2 * (product_freq['precision'] * product_freq['recall']) / (product_freq['precision'] + product_freq['recall'])
 
+# Changed from regplot to scatterplot (no trend line)
 plt.figure(figsize=(10, 6))
-sns.regplot(data=product_freq, x='count', y='f1', 
-           scatter_kws={'alpha': 0.6, 'color': 'mediumblue'}, 
-           line_kws={'color': 'navy'})
-plt.title('F1-Score vs. Product Frequency with Trend Line')
+sns.scatterplot(data=product_freq, x='count', y='f1', color='mediumblue', alpha=0.6)
+plt.title('F1-Score vs. Product Frequency')
 plt.xlabel('Number of product occurrences (ground truth)')
 plt.ylabel('F1-Score')
 plt.grid(True, alpha=0.3)
@@ -215,10 +206,8 @@ print("\nSaving visualizations to Visual folder...")
 # We've already saved the visualizations above, so this section is no longer necessary
 # But we keep the filenames for compatibility
 plt.figure(figsize=(10, 6))
-sns.regplot(data=product_freq, x='count', y='recall', 
-           scatter_kws={'alpha': 0.5, 'color': 'blue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Recall vs. Product Frequency with Trend Line')
+sns.scatterplot(data=product_freq, x='count', y='recall', color='blue', alpha=0.5)
+plt.title('Recall vs. Product Frequency')
 plt.xlabel('Number of product occurrences (ground truth)')
 plt.ylabel('Recall')
 plt.grid(True, alpha=0.3)
@@ -228,10 +217,8 @@ plt.close()
 
 # Precision vs frequency
 plt.figure(figsize=(10, 6))
-sns.regplot(data=product_freq, x='count', y='precision', 
-           scatter_kws={'alpha': 0.5, 'color': 'steelblue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Precision vs. Product Frequency with Trend Line')
+sns.scatterplot(data=product_freq, x='count', y='precision', color='steelblue', alpha=0.5)
+plt.title('Precision vs. Product Frequency')
 plt.xlabel('Number of product occurrences (ground truth)')
 plt.ylabel('Precision')
 plt.grid(True, alpha=0.3)
@@ -241,10 +228,8 @@ plt.close()
 
 # Also save with original filenames for compatibility
 plt.figure(figsize=(10, 6))
-sns.regplot(data=length_perf, x='instruction_length', y='recall', 
-           scatter_kws={'alpha': 0.5, 'color': 'blue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Instruction Length vs Recall with Trend Line')
+sns.scatterplot(data=length_perf, x='instruction_length', y='recall', color='blue', alpha=0.5)
+plt.title('Instruction Length vs Recall per Product')
 plt.xlabel('Average instruction length')
 plt.ylabel('Recall')
 plt.grid(True, alpha=0.3)
@@ -253,10 +238,8 @@ plt.savefig('Visual/recall_vs_instruction_length.png', dpi=300, bbox_inches='tig
 plt.close()
 
 plt.figure(figsize=(10, 6))
-sns.regplot(data=length_perf, x='instruction_length', y='precision', 
-           scatter_kws={'alpha': 0.5, 'color': 'cornflowerblue'}, 
-           line_kws={'color': 'navy'})
-plt.title('Instruction Length vs Precision with Trend Line')
+sns.scatterplot(data=length_perf, x='instruction_length', y='precision', color='cornflowerblue', alpha=0.5)
+plt.title('Instruction Length vs Precision per Product')
 plt.xlabel('Average instruction length')
 plt.ylabel('Precision')
 plt.grid(True, alpha=0.3)
