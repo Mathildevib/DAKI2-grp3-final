@@ -13,10 +13,10 @@ STEMMER_LANG   = "danish"
 STOP_WORD_FILE = Path("data/danish_stopwords.txt")
 
 TEST_CSV       = Path("dataset") / "test_dataset.csv"
-PREP_FILE      = Path("preprocessor_lda.joblib")
-CLS_FILE       = Path("classifiers_lda.joblib")
-MLB_FILE       = Path("label_binarizer_lda.joblib")
-QTY_CLS_FILE   = Path("quantity_classifiers_lda.joblib")
+PREP_FILE      = Path("preprocessor_tfidf_svc.joblib")
+CLS_FILE       = Path("classifiers_tfidf_svc.joblib")
+MLB_FILE       = Path("label_binarizer_tfidf_svc.joblib")
+QTY_CLS_FILE   = Path("quantity_classifiers_tfidf_svc.joblib")
 # --------------------------------------------------
 
 stemmer = SnowballStemmer(STEMMER_LANG)

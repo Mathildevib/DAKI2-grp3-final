@@ -25,7 +25,7 @@ from sklearn.metrics import precision_recall_curve, average_precision_score
 
 
 # Data configuration
-DATA_CSV = Path("dataset") / "train_dataset.csv"
+DATA_CSV = Path("Dataset") / "train_dataset.csv"
 TARGET_COL = "Product ID (Product) (Product)"
 GROUP_COL = "Work Order"
 QUANTITY_COL = "Quantity"
@@ -45,7 +45,7 @@ def load_stemmed_stopwords(path: str) -> set[str]:
     return sw
 
 
-STOP_WORDS_FILE = r"DAKI2-grp3-final-main\\Data\\danish_stopwords.txt"
+STOP_WORDS_FILE = r"Data\danish_stopwords.txt"
 STOP_WORDS = load_stemmed_stopwords(STOP_WORDS_FILE)
 
 # TF-IDF settings
