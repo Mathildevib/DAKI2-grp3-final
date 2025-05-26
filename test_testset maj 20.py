@@ -86,18 +86,29 @@ def accuracy_counts(y_true_cnt,y_pred_cnt):
     mask = y_true_cnt > 0
     return np.mean((y_true_cnt[mask]==y_pred_cnt[mask]).astype(float))
 
-def quantity_precision_recall(y_true_cnt, y_pred_cnt):
+def quantity_precision_recall(y_true_cnt, y_pred_cnt, eval_mask):
     """
-    Calculates precision and recall for quantity prediction (nonzero counts).
-    Precision: Of all predicted nonzero, how many are correct.
-    Recall: Of all true nonzero, how many are correctly predicted nonzero.
+    Precision & recall for quantity prediction.
+
+    A cell counts as a true-positive (TP)  
+    predicted quantity == true quantity > 0.
+
+
+    Returns
+    -------
+    precision : TP / (# predicted non-zero inside mask)
+    recall    : TP / (# true   non-zero in whole set)
     """
-    true_nonzero = (y_true_cnt > 0)
-    pred_nonzero = (y_pred_cnt > 0)
-    tp = np.logical_and(true_nonzero, pred_nonzero).sum()
-    precision = tp / pred_nonzero.sum() if pred_nonzero.sum() else 0.0
-    recall = tp / true_nonzero.sum() if true_nonzero.sum() else 0.0
+    # predicted non-zero cells inside the evaluation mask
+    pred_pos = (y_pred_cnt > 0) & eval_mask
+
+    # true-positives: exact match & inside mask
+    tp = ((y_pred_cnt == y_true_cnt) & (y_true_cnt > 0) & eval_mask).sum()
+
+    precision = tp / pred_pos.sum()            if pred_pos.sum() else 0.0
+    recall    = tp / (y_true_cnt > 0).sum()    if (y_true_cnt > 0).sum() else 0.0
     return precision, recall
+
 
 def apply_quantity_safeguard(proba, qty_pred, k=TOP_K):
     topk = np.argsort(proba, axis=1)[:, -k:]
@@ -181,26 +192,31 @@ def main():
 
     # ---------- 5) Metrics ----------
     n, C = proba.shape
-    y_pred_bin = np.zeros_like(proba, dtype=int)
-    topk = np.argsort(proba, axis=1)[:, -TOP_K:]
-    y_pred_bin[np.repeat(np.arange(n), TOP_K), topk.ravel()] = 1
 
+    # 5.1  build top-5 mask  (True where label is in top-5 for that row)
+    top5_mask = np.zeros_like(proba, dtype=bool)
+    topk = np.argsort(proba, axis=1)[:, -TOP_K:]
+    top5_mask[np.repeat(np.arange(n), TOP_K), topk.ravel()] = True
+
+    # 5.2  standard classification metrics
     metrics = {
         f"precision@{TOP_K}": precision_at_k(Y_bin, proba),
         f"recall@{TOP_K}"   : recall_at_k(Y_bin, proba),
         f"f1@{TOP_K}"       : f1_at_k(Y_bin, proba),
         "weighted"          : weighted_proba_score(Y_bin, proba),
-        "iou"               : iou_score(Y_bin, y_pred_bin),
-        "quantity_acc"      : accuracy_counts(Y_cnt, qty_pred)
+        "iou"               : iou_score(Y_bin, top5_mask.astype(int)),
+        "quantity_acc"      : accuracy_counts(Y_cnt, qty_pred)      # unchanged
     }
 
-    qty_prec, qty_rec = quantity_precision_recall(Y_cnt, qty_pred)
-    print("\n===== Test-set metrics =====")
-    for k, v in metrics.items():
-        print(f"{k:>15}: {v:.3f}")
-    print(f"quantity_acc precision: {qty_prec:.3f}")
-    print(f"quantity_acc recall:    {qty_rec:.3f}")
+    # 5.3  quantity metrics INSIDE the (fallback-enhanced) top-5
+    qty_prec5, qty_rec5 = quantity_precision_recall(Y_cnt, qty_pred, top5_mask)
 
+    # 5.4  print everything
+    print("\n===== Test-set metrics =====")
+    for name, value in metrics.items():
+        print(f"{name:>20}: {value:.3f}")
+    print(f"quantity@{TOP_K} precision: {qty_prec5:.3f}")
+    print(f"quantity@{TOP_K} recall:    {qty_rec5:.3f}")
     # --- Confusion matrix for quantity prediction ---
     from sklearn.metrics import confusion_matrix
     import matplotlib.pyplot as plt
