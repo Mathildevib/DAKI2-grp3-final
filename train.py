@@ -45,7 +45,7 @@ def load_stemmed_stopwords(path: str) -> set[str]:
     return sw
 
 
-STOP_WORDS_FILE = "data/danish_stopwords.txt"
+STOP_WORDS_FILE = r"DAKI2-grp3-final-main\\Data\\danish_stopwords.txt"
 STOP_WORDS = load_stemmed_stopwords(STOP_WORDS_FILE)
 
 # TF-IDF settings
@@ -61,9 +61,6 @@ TOP_K = 5
 SVM_MAX_ITER = 200000
 RANDOM_STATE = 42
 EXAMPLES = 5
-
-
-
 
 # --- Metrics functions ---
 def precision_at_k(y_true, proba, k=TOP_K):
@@ -174,16 +171,10 @@ def build_preprocessor(stop_words=STOP_WORDS, max_features=MAX_FEATURES):
             sublinear_tf=True,
             min_df=MIN_DF,
             max_df=MAX_DF
-        )),
-#        ('svd', TruncatedSVD(
-#            n_components=n_topics,
-#            random_state=RANDOM_STATE
-#        )),
-#        ('norm', Normalizer(copy=False))
+        ))
     ])
     
     return ColumnTransformer([
-#        ('text_lsa', text_pipeline, 'Instructions'),
         ('text_tfidf', text_pipeline, 'Instructions'),
         ('ohe', OneHotEncoder(handle_unknown='ignore'),
                ['Primær Asset Produkt'])
@@ -201,10 +192,10 @@ def apply_quantity_safeguard(proba, qty_pred, k=TOP_K):
     return qty_pred
 
 # --- Cross-validation with metrics logging ---
-def  cross_validate_transformed(Xt, Y_bin, Y_cnt, groups):
+def  cross_validate(Xt, Y_bin, Y_cnt, groups):
     """
-    Cross-validate on pre-transformed features Xt
-    (TF-IDF/SVD/OHE), with calibration and quantity-SVN or Dummy fallback.
+    Cross-validate on pre-transformed features, in 2 pipelines:
+    TF-IDF+OHE, with calibration and quantity-SVC with Dummy fallback.
     """
     gkf = GroupKFold(n_splits=K_FOLDS)
 
@@ -216,19 +207,22 @@ def  cross_validate_transformed(Xt, Y_bin, Y_cnt, groups):
         print(f"Fold {fold}: train={len(tr)}, val={len(te)}")
         Xt_tr, Xt_te = Xt[tr], Xt[te]
 
-        # ------- Stage 1: multilabel classification with calibration -------
+        # ------- pipeline 1: multilabel classification with calibration -------
         for lbl in range(Y_bin.shape[1]):
             y_tr = Y_bin[tr, lbl]
-            if len(np.unique(y_tr)) < 2:          # not enough variation
+            if len(np.unique(y_tr)) < 2:          
                 continue
 
+            # train one LinearSVC (OvR) for this label
             base = LinearSVC(max_iter=SVM_MAX_ITER, random_state=RANDOM_STATE)
             base.fit(Xt_tr, y_tr)
 
+            # wrap in Platt-scaling calibrator
             try:
                 calib = CalibratedClassifierCV(base, cv=3, method="sigmoid", n_jobs=-1)
                 calib.fit(Xt_tr, y_tr)
-            except ValueError:  # e.g. not enough pos/neg per fold
+
+            except ValueError: 
                 calib = CalibratedClassifierCV(base, cv="prefit", method="sigmoid", n_jobs=-1)
                 calib.fit(Xt_tr, y_tr)
 
@@ -240,7 +234,7 @@ def  cross_validate_transformed(Xt, Y_bin, Y_cnt, groups):
             yq   = Y_cnt[tr, lbl][mask]
 
             # ---- Dummy fallback: not enough examples or 1 unique value
-            if mask.sum() < 3 or len(np.unique(yq)) < 2:
+            if mask.sum() < 3 or len(np.unique(yq)) < 2: #the check
                 constant = 0 if mask.sum() == 0 else int(np.bincount(yq).argmax())
                 dummy = DummyClassifier(strategy="constant", constant=constant)
                 # same number of features as Xt_tr to avoid shape errors
@@ -248,7 +242,7 @@ def  cross_validate_transformed(Xt, Y_bin, Y_cnt, groups):
                 qty_pred[te, lbl] = dummy.predict(Xt_te)
                 continue
 
-            # ---- Enough data → real SVC
+            #if Enough data → real SVC
             qclf = LinearSVC(max_iter=SVM_MAX_ITER, random_state=RANDOM_STATE)
             qclf.fit(Xt_tr[mask], yq)
             qty_pred[te, lbl] = qclf.predict(Xt_te)
@@ -259,7 +253,7 @@ def  cross_validate_transformed(Xt, Y_bin, Y_cnt, groups):
         # ------------------ Metrics ------------------
         pm_tr = evaluate(Y_bin[tr], proba[tr])
         pm_tr["quantity_acc"] = accuracy_counts(Y_cnt[tr], qty_pred[tr])
-        # Tilføj quantity precision/recall for træningssplit
+        # add quantity precision/recall for trainsplit
         qty_prec_tr, qty_rec_tr = quantity_precision_recall(Y_cnt[tr], qty_pred[tr])
         pm_tr["quantity_precision"] = qty_prec_tr
         pm_tr["quantity_recall"] = qty_rec_tr
@@ -278,23 +272,6 @@ def  cross_validate_transformed(Xt, Y_bin, Y_cnt, groups):
 
 
 # --- Helpers for display ---
-
-def display_fold_comparison(train_metrics, val_metrics):
-    # Create DataFrames for train and validation metrics
-    train_df = pd.DataFrame([met for _, met in train_metrics],
-                            index=[f"Fold {fold}" for fold, _ in train_metrics])
-    val_df = pd.DataFrame([met for _, met in val_metrics],
-                          index=[f"Fold {fold}" for fold, _ in val_metrics])
-    # Ensure consistent column order
-    col_order = train_df.columns.tolist()
-    val_df = val_df.reindex(columns=col_order)
-
-    print("--- Train Metrics per Fold ---")
-    print(train_df.to_string())
-    print("--- Validation Metrics per Fold ---")
-    print(val_df.to_string())
-
-
 def evaluate(y_true, proba):
     y_pred = np.zeros_like(proba,dtype=int)
     for i,idxs in enumerate(np.argsort(proba,axis=1)[:,-TOP_K:]):
@@ -307,48 +284,12 @@ def evaluate(y_true, proba):
         'iou': iou_score(y_true,y_pred)
     }
 
-def print_example_predictions(df, proba, qty_pred, mlb, k=TOP_K, n_examples=3):
-    print("\n-- Example predictions --")
-    for i in range(min(n_examples, len(df))):
-        wo = df[GROUP_COL].iloc[i]
-        true_parts = df[TARGET_COL].iloc[i]
-        true_qtys  = df[QUANTITY_COL].iloc[i]
-        true_map   = {p: q for p, q in zip(true_parts, true_qtys)}
-        prob_row   = proba[i]
-        qty_row    = qty_pred[i]
-        topk_idxs  = np.argsort(prob_row)[-k:][::-1]
-        preds = [(mlb.classes_[j], prob_row[j], qty_row[j]) for j in topk_idxs]
-
-        print(f"\nWork Order {wo}")
-        print("  True :", [f"{p}×{true_map[p]}" for p in true_parts])
-        print("  Pred :", [f"{p} ({s:.3f}) → {q}×" for p, s, q in preds])
-
-# --- Precision-Recall Curve ---
-def plot_pr_curve(y_true, proba):
-    """
-    Plot macro-average Precision-Recall curve across classes.
-    """
-    # Compute macro-average precision score
-    ap = average_precision_score(y_true, proba, average='macro')
-    # For PR curve, compute micro-averaged curve for plotting
-    y_true_flat = y_true.ravel()
-    proba_flat = proba.ravel()
-    precision, recall, _ = precision_recall_curve(y_true_flat, proba_flat)
-    plt.figure()
-    plt.plot(recall, precision, label=f'macro AP = {ap:.3f}')
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title('Precision-Recall curve')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
 def train_and_export_final_model(
     df,
     max_features,
     svm_max_iter,
     random_state,
-    output_prefix="lda"
+    output_prefix="tfidf_svc"
 ):
 
     # 1) Build and fit the preprocessor
@@ -413,27 +354,6 @@ def train_and_export_final_model(
 
     return preprocessor, class_clfs, mlb, qty_clfs
 
-
-
-
-# --- Summarize sweep results ---
-def summarize_sweep_results(records):
-    df_sweep = pd.DataFrame.from_records(records).set_index('max_features')
-    print("\n=== Sweep Summary ===")
-    print(df_sweep)
-    # To enable visualization, uncomment the following lines:
-    # import matplotlib.pyplot as plt
-    # plt.figure()
-    # plt.plot(df_sweep.index, df_sweep[f'recall@{TOP_K}'], marker='o')
-    # plt.xscale('log')
-    # plt.xlabel('TF-IDF max_features')
-    # plt.ylabel(f'Recall@{TOP_K}')
-    # plt.title(f'Recall@{TOP_K} vs TF-IDF max_features')
-    # plt.tight_layout()
-    # plt.show()
-    return df_sweep
-
-
 # --- Main workflow ---
 def main():
     # 1) Load CSV and preprocess text columns
@@ -471,7 +391,7 @@ def main():
         _, Y_bin, Y_cnt, mlb = make_targets(df)
 
         # 3d) Run CV on transformed features
-        proba, qty_pred, train_metrics, val_metrics = cross_validate_transformed(
+        proba, qty_pred, train_metrics, val_metrics = cross_validate(
             X_trans, Y_bin, Y_cnt, df[GROUP_COL]
         )
 
@@ -499,14 +419,8 @@ def main():
 
         records.append(mean_val)
 
-    # 4) Summarize sweep results
-    df_sweep = summarize_sweep_results(records)
-    best_mf = df_sweep[f'recall@{TOP_K}'].idxmax()
-
-    print(f"\nBest max_features by recall@{TOP_K}: {best_mf}")
-    print(df_sweep.loc[best_mf])
-
-    final_prep, final_clf, mlb, final_qty_clfs = train_and_export_final_model(df, best_mf, SVM_MAX_ITER, RANDOM_STATE,output_prefix="lda")
+    # 4) export final model
+    final_prep, final_clf, mlb, final_qty_clfs = train_and_export_final_model(df, MAX_FEATURES, SVM_MAX_ITER, RANDOM_STATE,output_prefix="tfidf_svc")
 
 if __name__ == "__main__":
     main()
